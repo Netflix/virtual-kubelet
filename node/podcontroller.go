@@ -599,7 +599,10 @@ func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod,
 		}
 
 		key = fmt.Sprintf("%v/%v", key, pod.UID)
-		pc.deletePodsFromKubernetes.EnqueueWithoutRateLimitWithDelay(ctx, key, time.Second*time.Duration(*pod.DeletionGracePeriodSeconds))
+		// HACK: We add a 5-second buffer here to allow for clean-up related to the pod to finish before the pod is
+		// forcibly deleted. This is necessary in situations where the container gets SIGKILL'd due to timing out on
+		// the termination grace period.
+		pc.deletePodsFromKubernetes.EnqueueWithoutRateLimitWithDelay(ctx, key, time.Second*time.Duration(*pod.DeletionGracePeriodSeconds+5))
 		return nil
 	}
 
